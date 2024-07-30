@@ -1,41 +1,55 @@
-#!/usr/bin/env groovy
-
 pipeline {
     agent any
+
     tools {
-        nodejs 'node-8.1.3'
+        nodejs 'node-js' // Replace with your configured NodeJS version name
     }
+
     stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/mukeshsirvi18/jenkins-pipeline-example' // Replace with your repo URL
+            }
+        }
         stage('Build') {
             steps {
-                sh 'nodejs --version'
                 sh 'npm install'
-                sh 'gulp lint'
+                sh 'npm run build'
             }
         }
         stage('Test') {
             steps {
-                sh 'nodejs --version'
-                sh 'gulp test'
+                sh 'npm test'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def app = docker.build("YOUR_DOCKERHUB_USERNAME/YOUR_IMAGE_NAME:${env.BUILD_ID}") // Update with your DockerHub username and image name
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') { // Replace with your DockerHub credentials ID
+                        app.push()
+                    }
+                }
             }
         }
     }
+
     post {
         always {
-            echo 'One way or another, I have finished'
-            deleteDir() /* clean up our workspace */
+            echo 'Pipeline finished.'
+            deleteDir() // Clean up workspace
         }
         success {
-            echo 'I succeeeded!'
-        }
-        unstable {
-            echo 'I am unstable :/'
+            echo 'Build succeeded!'
         }
         failure {
-            echo 'I failed :('
-        }
-        changed {
-            echo 'Things were different before...'
+            echo 'Build failed.'
         }
     }
 }
